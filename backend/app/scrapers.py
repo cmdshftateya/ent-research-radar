@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from typing import List
+from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
@@ -26,13 +27,14 @@ def fetch_institution_roster(institution: Institution) -> List[dict]:
     url = institution.website
     if not url:
         return []
+    if "northwestern" in url:
+        return fetch_northwestern(url)
+
     html = fetch_html(url)
     if not html:
         return []
     soup = BeautifulSoup(html, "html.parser")
 
-    if "northwestern" in url:
-        return parse_northwestern(soup, url)
     if "uchicago" in url:
         return parse_uchicago(soup, url)
     if "uic.edu" in url:
@@ -53,26 +55,64 @@ def fetch_html(url: str) -> str | None:
         return None
 
 
-def parse_northwestern(soup: BeautifulSoup, base_url: str) -> List[dict]:
+def fetch_northwestern(base_url: str) -> List[dict]:
+    """
+    Northwestern faculty pages are paginated (9 pages). Each page has:
+    - div.facultyList
+      - multiple div.profile.row
+        - h3 > a (name + profile link)
+        - p.rankDept with title info
+    """
+    results: List[dict] = []
+    seen_pages = set()
+    next_url = base_url
+
+    while next_url and next_url not in seen_pages:
+        seen_pages.add(next_url)
+        html = fetch_html(next_url)
+        if not html:
+            break
+        soup = BeautifulSoup(html, "html.parser")
+        results.extend(parse_northwestern_page(soup, base_url))
+        next_url = find_next_page(soup, next_url)
+
+    return dedupe(results)
+
+
+def parse_northwestern_page(soup: BeautifulSoup, base_url: str) -> List[dict]:
     results = []
-    cards = soup.select(".faculty-listing .faculty-list-item, .faculty-list .person")
+    cards = soup.select("div.facultyList div.profile.row")
     if not cards:
         return generic_people_scrape(soup, base_url)
+
     for card in cards:
-        name = card.get_text(" ", strip=True)
-        link = card.find("a")
-        email = None
-        profile_url = None
-        if link and link.get("href"):
-            href = link.get("href")
-            if href.startswith("mailto:"):
-                email = href.split("mailto:")[-1]
-            else:
-                profile_url = href if href.startswith("http") else base_url.rstrip("/") + "/" + href.lstrip("/")
-                name = link.get_text(" ", strip=True) or name
+        h3 = card.find("h3")
+        link = h3.find("a") if h3 else None
+        name = link.get_text(strip=True) if link else (h3.get_text(strip=True) if h3 else None)
+        profile_url = urljoin(base_url, link["href"]) if link and link.get("href") else None
+        email = None  # NW page does not expose email on the list; leave null.
+
         if name:
-            results.append({"name": name, "email": email, "profile_url": profile_url})
-    return dedupe(results)
+            results.append(
+                {
+                    "name": name,
+                    "email": email,
+                    "profile_url": profile_url,
+                }
+            )
+    return results
+
+
+def find_next_page(soup: BeautifulSoup, current_url: str) -> str | None:
+    # Look for pagination links labeled next or with rel/aria markers.
+    next_link = soup.find("a", attrs={"aria-label": re.compile("next", re.I)})
+    if not next_link:
+        next_link = soup.find("a", string=re.compile("next", re.I))
+    if not next_link:
+        next_link = soup.select_one(".pagination a.next, .pager-next a")
+    if next_link and next_link.get("href"):
+        return urljoin(current_url, next_link["href"])
+    return None
 
 
 def parse_uchicago(soup: BeautifulSoup, base_url: str) -> List[dict]:
