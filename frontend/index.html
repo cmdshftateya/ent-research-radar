@@ -6,38 +6,42 @@
   <title>ENT Research Tool</title>
   <style>
     :root {
-      --bg: #f6f8fb;
+      --bg: #f7f1e9;
       --panel: #ffffff;
-      --accent: #0f766e;
+      --accent: #1b998b;
+      --accent-2: #f4b860;
       --muted: #5f6b7a;
-      --border: #e2e8f0;
-      --shadow: 0 12px 40px rgba(15, 118, 110, 0.08);
+      --border: #e0d6c7;
+      --shadow: 0 12px 40px rgba(27, 153, 139, 0.15);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Helvetica Neue", "Segoe UI", system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: #111827;
+      font-family: "Futura", "Avenir Next", "Gill Sans", system-ui, sans-serif;
+      background: radial-gradient(circle at 12% 20%, rgba(244, 184, 96, 0.28), transparent 24%),
+                  radial-gradient(circle at 82% 8%, rgba(27, 153, 139, 0.18), transparent 20%),
+                  var(--bg);
+      color: #1b1c1e;
     }
     header {
-      padding: 24px;
-      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+      padding: 28px;
+      background: linear-gradient(135deg, #1b998b, #2660a4);
       color: white;
       box-shadow: var(--shadow);
+      clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
     }
-    header h1 { margin: 0 0 8px 0; font-size: 24px; }
-    header p { margin: 0; color: rgba(255,255,255,0.85); }
+    header h1 { margin: 0 0 8px 0; font-size: 26px; letter-spacing: 0.5px; }
+    header p { margin: 0; color: rgba(255,255,255,0.86); }
     .layout {
       display: grid;
       grid-template-columns: 360px 1fr;
-      gap: 16px;
-      padding: 16px;
+      gap: 18px;
+      padding: 18px;
     }
     .card {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 14px;
       box-shadow: var(--shadow);
       overflow: hidden;
     }
@@ -51,58 +55,66 @@
     }
     .search {
       width: 100%;
-      padding: 10px 12px;
+      padding: 12px 14px;
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 12px;
       outline: none;
+      font-size: 14px;
+      background: #fdfbf8;
     }
     .list {
-      max-height: calc(100vh - 200px);
+      max-height: calc(100vh - 220px);
       overflow-y: auto;
     }
     .professor {
       padding: 14px 16px;
       border-bottom: 1px solid var(--border);
       cursor: pointer;
-      transition: background 0.1s ease;
+      transition: background 0.12s ease, transform 0.12s ease;
     }
-    .professor:hover { background: #f1f5f9; }
-    .professor strong { display: block; font-size: 15px; }
+    .professor:hover { background: #f9f4ea; transform: translateX(2px); }
+    .professor strong { display: block; font-size: 16px; letter-spacing: 0.2px; }
     .professor small { color: var(--muted); }
     .tags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
     .tag {
-      background: #e0f2f1;
-      color: #0f766e;
-      padding: 4px 8px;
+      background: #f4b860;
+      color: #1b1c1e;
+      padding: 4px 10px;
       border-radius: 999px;
       font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
     }
-    .detail { padding: 20px; }
+    .detail { padding: 22px; }
     .section {
       margin-bottom: 24px;
     }
     .section h3 {
       margin: 0 0 12px 0;
-      font-size: 16px;
-      color: #0f172a;
+      font-size: 17px;
+      color: #1f2937;
+      letter-spacing: 0.3px;
     }
     .pub {
       padding: 10px 0;
       border-bottom: 1px solid var(--border);
     }
     .pub:last-child { border-bottom: none; }
-    .pub-title { font-weight: 600; margin: 0 0 6px 0; }
+    .pub-title { font-weight: 700; margin: 0 0 6px 0; }
+    .pub-title a { color: #2660a4; text-decoration: none; }
+    .pub-title a:hover { text-decoration: underline; }
     .pub-meta { color: var(--muted); font-size: 13px; }
-    .co-authors { background: #ecfeff; color: #0e7490; padding: 2px 6px; border-radius: 8px; margin-right: 6px; font-size: 12px; }
+    .co-authors { background: #1b998b; color: #fff; padding: 2px 8px; border-radius: 10px; margin-right: 6px; font-size: 12px; }
+    .chip { background: #f4b860; color: #1b1c1e; padding: 6px 10px; border-radius: 12px; display: inline-block; margin: 4px 4px 0 0; font-size: 12px; font-weight: 600; }
     .sidebar {
       position: fixed;
       left: -340px;
       top: 0;
       height: 100vh;
       width: 320px;
-      background: #0f172a;
+      background: #1b1c1e;
       color: white;
-      padding: 20px;
+      padding: 22px;
       transition: left 0.2s ease;
       box-shadow: 8px 0 30px rgba(0,0,0,0.25);
       display: flex;
@@ -119,32 +131,37 @@
       padding: 12px;
       font-family: inherit;
       resize: none;
+      background: #111215;
+      color: #e8e6e3;
     }
     .sidebar button {
-      background: #22c55e;
-      color: #0f172a;
+      background: #f4b860;
+      color: #1b1c1e;
       border: none;
       border-radius: 10px;
       padding: 12px;
       cursor: pointer;
-      font-weight: 600;
+      font-weight: 700;
+      letter-spacing: 0.3px;
     }
     .toggle {
       position: fixed;
       left: 12px;
       top: 20px;
-      background: #0f766e;
+      background: #1b998b;
       color: white;
-      padding: 10px 14px;
+      padding: 12px 16px;
       border-radius: 999px;
       border: none;
       cursor: pointer;
       box-shadow: var(--shadow);
       z-index: 11;
+      letter-spacing: 0.4px;
     }
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; }
       .list { max-height: none; }
+      .toggle { top: auto; bottom: 18px; }
     }
   </style>
 </head>

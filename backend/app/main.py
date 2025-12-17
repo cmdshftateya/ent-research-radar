@@ -1,8 +1,10 @@
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import crud
+from .config import OFFLINE
 from .db import Base, engine, get_session
 from .models import Institution, Professor
 from .schemas import ProfessorDetail, ProfessorSummary
@@ -10,6 +12,13 @@ from .schemas import ProfessorDetail, ProfessorSummary
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="ENT Research Tool", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_db():
@@ -19,7 +28,7 @@ def get_db():
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True}
+    return {"ok": True, "offline": OFFLINE}
 
 
 @app.get("/professors", response_model=list[ProfessorSummary])
