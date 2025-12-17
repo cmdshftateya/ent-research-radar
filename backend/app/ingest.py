@@ -14,7 +14,7 @@ from typing import Iterable, List, Optional
 
 from . import crud
 from .config import OFFLINE
-from .db import get_session
+from .db import Base, engine, get_session
 from .models import Institution, Professor
 from .scrapers import fetch_institution_roster
 from .publications import fetch_publications, derive_tags
@@ -40,6 +40,7 @@ INSTITUTIONS = [
 
 
 def refresh_all() -> None:
+    Base.metadata.create_all(bind=engine)
     with get_session() as session:
         if OFFLINE:
             seed_sample_data(session)
