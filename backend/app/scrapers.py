@@ -81,7 +81,7 @@ def fetch_northwestern(base_url: str) -> List[dict]:
 
 def parse_northwestern_page(soup: BeautifulSoup, base_url: str) -> List[dict]:
     results = []
-    cards = soup.select("div.facultyList div.profile.row")
+    cards = soup.select("#facultyList div.profile.row")
     if not cards:
         return generic_people_scrape(soup, base_url)
 
