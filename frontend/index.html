@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ENT Research Tool</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --accent: #0f766e;
+      --muted: #5f6b7a;
+      --border: #e2e8f0;
+      --shadow: 0 12px 40px rgba(15, 118, 110, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Helvetica Neue", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: #111827;
+    }
+    header {
+      padding: 24px;
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+      color: white;
+      box-shadow: var(--shadow);
+    }
+    header h1 { margin: 0 0 8px 0; font-size: 24px; }
+    header p { margin: 0; color: rgba(255,255,255,0.85); }
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+      padding: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .list-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .search {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+    }
+    .list {
+      max-height: calc(100vh - 200px);
+      overflow-y: auto;
+    }
+    .professor {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s ease;
+    }
+    .professor:hover { background: #f1f5f9; }
+    .professor strong { display: block; font-size: 15px; }
+    .professor small { color: var(--muted); }
+    .tags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag {
+      background: #e0f2f1;
+      color: #0f766e;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+    .detail { padding: 20px; }
+    .section {
+      margin-bottom: 24px;
+    }
+    .section h3 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      color: #0f172a;
+    }
+    .pub {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .pub:last-child { border-bottom: none; }
+    .pub-title { font-weight: 600; margin: 0 0 6px 0; }
+    .pub-meta { color: var(--muted); font-size: 13px; }
+    .co-authors { background: #ecfeff; color: #0e7490; padding: 2px 6px; border-radius: 8px; margin-right: 6px; font-size: 12px; }
+    .sidebar {
+      position: fixed;
+      left: -340px;
+      top: 0;
+      height: 100vh;
+      width: 320px;
+      background: #0f172a;
+      color: white;
+      padding: 20px;
+      transition: left 0.2s ease;
+      box-shadow: 8px 0 30px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 10;
+    }
+    .sidebar.open { left: 0; }
+    .sidebar textarea {
+      flex: 1;
+      width: 100%;
+      border-radius: 10px;
+      border: none;
+      padding: 12px;
+      font-family: inherit;
+      resize: none;
+    }
+    .sidebar button {
+      background: #22c55e;
+      color: #0f172a;
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .toggle {
+      position: fixed;
+      left: 12px;
+      top: 20px;
+      background: #0f766e;
+      color: white;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      z-index: 11;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .list { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <button class="toggle" id="toggleSidebar">Draft email</button>
+  <div class="sidebar" id="sidebar">
+    <h3 style="margin:0;">Email draft</h3>
+    <textarea id="draft" placeholder="Write your outreach draft here..."></textarea>
+    <button id="copyBtn">Copy to clipboard</button>
+  </div>
+
+  <header>
+    <h1>ENT Research Radar</h1>
+    <p>Browse ENT faculty across Chicago institutions, track pubs, and prep outreach.</p>
+  </header>
+
+  <div class="layout">
+    <div class="card">
+      <div class="list-header">
+        <input class="search" id="search" type="text" placeholder="Search by name or institution...">
+      </div>
+      <div class="list" id="profList"></div>
+    </div>
+
+    <div class="card">
+      <div class="detail" id="detail">
+        <p>Select a professor to view details.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="./main.js"></script>
+</body>
+</html>
