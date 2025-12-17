@@ -88,6 +88,13 @@ def parse_northwestern_page(soup: BeautifulSoup, base_url: str) -> List[dict]:
     for card in cards:
         h3 = card.find("h3")
         link = h3.find("a") if h3 else None
+
+        # Prefer profile links (profile.html?...), avoid mailto/tel anchors.
+        if not link or not link.get("href"):
+            link = card.find("a", href=re.compile(r"profile", re.I))
+        if link and link.get("href", "").startswith(("mailto:", "tel:")):
+            link = None
+
         name = link.get_text(strip=True) if link else (h3.get_text(strip=True) if h3 else None)
         profile_url = urljoin(base_url, link["href"]) if link and link.get("href") else None
         email = None  # NW page does not expose email on the list; leave null.
@@ -116,24 +123,84 @@ def find_next_page(soup: BeautifulSoup, current_url: str) -> str | None:
 
 
 def parse_uchicago(soup: BeautifulSoup, base_url: str) -> List[dict]:
-    results = []
-    cards = soup.select(".card-provider, .physician-listing")
-    for card in cards:
-        name_el = card.select_one("h3, .card-title")
-        name = name_el.get_text(strip=True) if name_el else card.get_text(" ", strip=True)
-        email = None
-        profile_url = None
-        profile_link = card.find("a")
-        if profile_link and profile_link.get("href"):
-            href = profile_link.get("href")
-            profile_url = href if href.startswith("http") else base_url.rstrip("/") + "/" + href.lstrip("/")
-        if name:
-            results.append({"name": name, "email": email, "profile_url": profile_url})
-    return dedupe(results)
+    def _strip_degrees(raw_name: str) -> str:
+        # Remove degree suffixes (e.g., ", MD", ", MD, MPH") and stray trailing credentials.
+        name = re.sub(r",.*$", "", raw_name).strip()
+        name = re.sub(
+            r"\s+(MD|DO|MSPA|MSN|MS|MPH|PHD|AUD|PA-C|NP|RN|FACS|CCC-SLP|FAAP|CNM|DNP)\.?$",
+            "",
+            name,
+            flags=re.IGNORECASE,
+        )
+        return name.strip()
+
+    sections = soup.find_all("section", class_="container")
+    start_idx = None
+    end_idx = None
+    for idx, sec in enumerate(sections):
+        heading = sec.find(["h1", "h2", "h3"])
+        title = heading.get_text(strip=True) if heading else ""
+        if start_idx is None and title == "Our Ear and Hearing Team":
+            start_idx = idx
+        if title == "Our Voice Center Team":
+            end_idx = idx
+            break
+
+    if start_idx is None:
+        return generic_people_scrape(soup, base_url)
+    target_sections = sections[start_idx : end_idx if end_idx is not None else len(sections)]
+
+    results: List[dict] = []
+    for sec in target_sections:
+        links = sec.select("a.Profile_profile__f6TYC, a[href*='/find-a-physician/physician/']")
+        for link in links:
+            href = link.get("href")
+            if not href or href.startswith(("mailto:", "tel:")):
+                continue
+            name_el = link.find(["h3", "h4"])
+            name = name_el.get_text(" ", strip=True) if name_el else link.get_text(" ", strip=True)
+            if not name:
+                img = link.find("img")
+                alt = img.get("alt") if img else None
+                name = alt.strip() if alt else ""
+            name = _strip_degrees(name)
+            if not name:
+                continue
+            profile_url = urljoin(base_url, href)
+            results.append({"name": name, "email": None, "profile_url": profile_url})
+
+    return dedupe(results) if results else generic_people_scrape(soup, base_url)
 
 
 def parse_uic(soup: BeautifulSoup, base_url: str) -> List[dict]:
     results = []
+    # New UIC layout: directory-list > profile-teaser cards
+    teaser_cards = soup.select(".directory-list.list--flat .profile-teaser")
+    if teaser_cards:
+        for card in teaser_cards:
+            name_el = card.select_one("._name a, ._name")
+            name = name_el.get_text(" ", strip=True) if name_el else card.get_text(" ", strip=True)
+
+            email_el = card.find("a", href=re.compile(r"mailto:", re.I))
+            email = email_el.get("href", "").split("mailto:")[-1] if email_el else None
+
+            link = card.select_one("._name a") or card.find(
+                "a", href=re.compile(r"profiles/", re.I)
+            )
+            if not link:
+                link = card.find("a", href=True)
+            profile_url = None
+            if link:
+                href = link.get("href")
+                if href and not href.startswith(("mailto:", "tel:")):
+                    profile_url = urljoin(base_url, href)
+
+            if name:
+                results.append({"name": name, "email": email, "profile_url": profile_url})
+
+        return dedupe(results)
+
+    # Fallback to older structures
     cards = soup.select(".faculty-list .person, .profile-card")
     for card in cards:
         name_el = card.select_one(".person-name, h3, h4")

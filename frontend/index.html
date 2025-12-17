@@ -6,189 +6,351 @@
   <title>ENT Research Tool</title>
   <style>
     :root {
-      --bg: #f7f1e9;
-      --panel: #ffffff;
-      --accent: #1b998b;
-      --accent-2: #f4b860;
-      --muted: #5f6b7a;
-      --border: #e0d6c7;
-      --shadow: 0 12px 40px rgba(27, 153, 139, 0.15);
+      --bg: #f8f6f1;
+      --ink: #0f1010;
+      --muted: #585858;
+      --line: #0f1010;
+      --accent: #ff5b5b;
+      --panel: #fffdf8;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Futura", "Avenir Next", "Gill Sans", system-ui, sans-serif;
-      background: radial-gradient(circle at 12% 20%, rgba(244, 184, 96, 0.28), transparent 24%),
-                  radial-gradient(circle at 82% 8%, rgba(27, 153, 139, 0.18), transparent 20%),
-                  var(--bg);
-      color: #1b1c1e;
+      font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+      letter-spacing: -0.01em;
+      overflow-x: hidden;
+    }
+    a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--ink); }
+    a:hover { background: var(--ink); color: var(--bg); }
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px 22px 48px;
+      transition: margin-right 0.25s ease;
     }
     header {
-      padding: 28px;
-      background: linear-gradient(135deg, #1b998b, #2660a4);
-      color: white;
-      box-shadow: var(--shadow);
-      clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+      padding: 22px;
+      background: var(--panel);
+      color: var(--ink);
+      border: 2px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 8px 8px 0 var(--line);
+      position: sticky;
+      top: 12px;
+      z-index: 2;
     }
-    header h1 { margin: 0 0 8px 0; font-size: 26px; letter-spacing: 0.5px; }
-    header p { margin: 0; color: rgba(255,255,255,0.86); }
+    header h1 {
+      margin: 0 0 6px 0;
+      font-size: 24px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    header p { margin: 0; color: var(--muted); font-size: 14px; }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .header-action {
+      background: var(--ink);
+      color: var(--bg);
+      border: 2px solid var(--line);
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 6px 6px 0 var(--line);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .header-action:hover { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 var(--line); background: var(--bg); color: var(--ink); }
     .layout {
       display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 18px;
-      padding: 18px;
+      grid-template-columns: minmax(320px, 380px) 1fr;
+      gap: 16px;
+      margin-top: 18px;
     }
     .card {
       background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      box-shadow: var(--shadow);
+      border: 2px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 10px 10px 0 var(--line);
       overflow: hidden;
+      position: relative;
     }
     .list-header {
       padding: 16px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 2px solid var(--line);
+      background: #fefcf6;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .list-controls {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 8px;
+      gap: 10px;
+      flex-wrap: wrap;
     }
     .search {
       width: 100%;
+      flex: 1;
       padding: 12px 14px;
-      border: 1px solid var(--border);
+      border: 2px solid var(--line);
       border-radius: 12px;
       outline: none;
       font-size: 14px;
-      background: #fdfbf8;
+      background: transparent;
+      color: var(--ink);
+      box-shadow: 6px 6px 0 var(--line);
+    }
+    .search:focus { background: #ffffff; }
+    .page-size {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    .page-size select {
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #ffffff;
+      color: var(--ink);
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 var(--line);
     }
     .list {
-      max-height: calc(100vh - 220px);
+      max-height: calc(100vh - 230px);
       overflow-y: auto;
     }
     .professor {
       padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px dashed var(--line);
       cursor: pointer;
-      transition: background 0.12s ease, transform 0.12s ease;
+      transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
+      display: grid;
+      gap: 6px;
     }
-    .professor:hover { background: #f9f4ea; transform: translateX(2px); }
-    .professor strong { display: block; font-size: 16px; letter-spacing: 0.2px; }
+    .professor:hover { background: var(--ink); color: var(--bg); transform: translateX(2px); }
+    .professor strong { display: block; font-size: 16px; letter-spacing: 0.03em; }
     .professor small { color: var(--muted); }
-    .tags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .professor:hover small { color: var(--bg); }
+    .tags { margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
     .tag {
-      background: #f4b860;
-      color: #1b1c1e;
+      background: #ffffff;
+      color: var(--ink);
       padding: 4px 10px;
       border-radius: 999px;
+      border: 1px solid var(--line);
       font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
     }
+    .professor:hover .tag { background: var(--bg); color: var(--ink); }
     .detail { padding: 22px; }
+    .profile-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border: 2px solid var(--line);
+      border-bottom: 2px solid var(--line);
+      border-radius: 12px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      background: #ffffff;
+      color: var(--ink);
+      text-decoration: none;
+      box-shadow: 4px 4px 0 var(--line);
+    }
+    .profile-link:hover {
+      background: var(--ink);
+      color: var(--bg);
+      box-shadow: 6px 6px 0 var(--line);
+    }
     .section {
       margin-bottom: 24px;
     }
     .section h3 {
-      margin: 0 0 12px 0;
-      font-size: 17px;
-      color: #1f2937;
-      letter-spacing: 0.3px;
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: var(--ink);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
     }
+    .section p { margin: 4px 0; color: var(--muted); }
     .pub {
       padding: 10px 0;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px dashed var(--line);
     }
     .pub:last-child { border-bottom: none; }
     .pub-title { font-weight: 700; margin: 0 0 6px 0; }
-    .pub-title a { color: #2660a4; text-decoration: none; }
-    .pub-title a:hover { text-decoration: underline; }
+    .pub-title a { border-bottom: 2px solid var(--ink); }
     .pub-meta { color: var(--muted); font-size: 13px; }
-    .co-authors { background: #1b998b; color: #fff; padding: 2px 8px; border-radius: 10px; margin-right: 6px; font-size: 12px; }
-    .chip { background: #f4b860; color: #1b1c1e; padding: 6px 10px; border-radius: 12px; display: inline-block; margin: 4px 4px 0 0; font-size: 12px; font-weight: 600; }
+    .co-authors {
+      background: #ffffff;
+      color: var(--ink);
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-right: 6px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      margin-top: 4px;
+      display: inline-block;
+    }
+    .chip {
+      background: #ffffff;
+      color: var(--ink);
+      padding: 6px 10px;
+      border-radius: 12px;
+      display: inline-block;
+      margin: 4px 8px 0 0;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--line);
+    }
     .sidebar {
       position: fixed;
-      left: -340px;
+      right: 0;
       top: 0;
       height: 100vh;
-      width: 320px;
-      background: #1b1c1e;
-      color: white;
+      width: 380px;
+      background: var(--ink);
+      color: var(--bg);
       padding: 22px;
-      transition: left 0.2s ease;
-      box-shadow: 8px 0 30px rgba(0,0,0,0.25);
+      transform: translateX(105%);
+      transition: transform 0.25s ease;
+      box-shadow: -12px 0 0 var(--line);
       display: flex;
       flex-direction: column;
       gap: 12px;
       z-index: 10;
+      border-left: 2px solid var(--line);
     }
-    .sidebar.open { left: 0; }
+    .sidebar.open { transform: translateX(0); }
     .sidebar textarea {
       flex: 1;
       width: 100%;
-      border-radius: 10px;
-      border: none;
+      border-radius: 12px;
+      border: 1px solid var(--bg);
       padding: 12px;
       font-family: inherit;
       resize: none;
-      background: #111215;
-      color: #e8e6e3;
+      background: transparent;
+      color: var(--bg);
     }
     .sidebar button {
-      background: #f4b860;
-      color: #1b1c1e;
-      border: none;
-      border-radius: 10px;
+      background: var(--bg);
+      color: var(--ink);
+      border: 2px solid var(--bg);
+      border-radius: 12px;
       padding: 12px;
       cursor: pointer;
-      font-weight: 700;
-      letter-spacing: 0.3px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 4px 4px 0 var(--bg);
     }
-    .toggle {
-      position: fixed;
-      left: 12px;
-      top: 20px;
-      background: #1b998b;
-      color: white;
-      padding: 12px 16px;
-      border-radius: 999px;
-      border: none;
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px 16px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .pagination .meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .page-btn {
+      border: 2px solid var(--line);
+      background: #ffffff;
+      color: var(--ink);
+      padding: 8px 12px;
+      border-radius: 10px;
       cursor: pointer;
-      box-shadow: var(--shadow);
-      z-index: 11;
-      letter-spacing: 0.4px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      box-shadow: 4px 4px 0 var(--line);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
     }
+    .page-btn:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 6px 6px 0 var(--line); }
+    .page-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+      box-shadow: none;
+      transform: none;
+    }
+    .page-range {
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    body.drawer-open .page { margin-right: 400px; }
+    body.drawer-open .layout { transition: inherit; }
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; }
       .list { max-height: none; }
-      .toggle { top: auto; bottom: 18px; }
+      body.drawer-open .page { margin-right: 0; }
+      .sidebar { width: min(100%, 380px); }
+      header { position: static; }
+      .page { padding: 16px; }
     }
   </style>
 </head>
 <body>
-  <button class="toggle" id="toggleSidebar">Draft email</button>
   <div class="sidebar" id="sidebar">
     <h3 style="margin:0;">Email draft</h3>
     <textarea id="draft" placeholder="Write your outreach draft here..."></textarea>
     <button id="copyBtn">Copy to clipboard</button>
   </div>
 
-  <header>
-    <h1>ENT Research Radar</h1>
-    <p>Browse ENT faculty across Chicago institutions, track pubs, and prep outreach.</p>
-  </header>
-
-  <div class="layout">
-    <div class="card">
-      <div class="list-header">
-        <input class="search" id="search" type="text" placeholder="Search by name or institution...">
+  <div class="page">
+    <header>
+      <div class="header-row">
+        <div>
+          <h1>ENT Research Radar</h1>
+          <p>Browse ENT faculty across Chicago institutions, track pubs, and prep outreach.</p>
+        </div>
+        <button class="header-action" id="toggleSidebar">Draft email</button>
       </div>
-      <div class="list" id="profList"></div>
-    </div>
+    </header>
 
-    <div class="card">
-      <div class="detail" id="detail">
-        <p>Select a professor to view details.</p>
+    <div class="layout">
+      <div class="card">
+        <div class="list-header">
+          <div class="list-controls">
+            <input class="search" id="search" type="text" placeholder="Search by name or institution...">
+            <label class="page-size">
+              <span>Page size</span>
+              <select id="pageSize">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="30">30</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="list" id="profList"></div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+
+      <div class="card">
+        <div class="detail" id="detail">
+          <p>Select a professor to view details.</p>
+        </div>
       </div>
     </div>
   </div>
