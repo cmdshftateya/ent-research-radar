@@ -165,6 +165,32 @@ function renderPagination(totalPages) {
   paginationEl.appendChild(controls);
 }
 
+function normalizeName(name = "") {
+  return name.toLowerCase().replace(/\./g, "").replace(/\s+/g, " ").trim();
+}
+
+function formatCoAuthors(pub, professorName) {
+  const coAuthors = pub?.co_authors || [];
+  if (!coAuthors.length) {
+    return `<span class="co-authors co-authors-muted">No co-authors listed</span>`;
+  }
+  const profNorm = normalizeName(professorName);
+  return coAuthors
+    .map((c) => {
+      const isProfessor = profNorm && normalizeName(c) === profNorm;
+      const label = isProfessor ? `<strong>${c}</strong>` : c;
+      return `<span class="co-authors">${label}</span>`;
+    })
+    .join("");
+}
+
+function renderAbstract(pub) {
+  if (pub?.abstract) {
+    return `<details class="abstract"><summary>Abstract</summary><p>${pub.abstract}</p></details>`;
+  }
+  return `<p class="abstract abstract-muted">Abstract not available.</p>`;
+}
+
 async function selectProfessor(id) {
   activeId = id;
   detailEl.innerHTML = "<p>Loading...</p>";
@@ -191,9 +217,8 @@ function renderDetail(p) {
       <div class="pub">
         <div class="pub-title">${pub.link ? `<a href="${pub.link}" target="_blank" rel="noopener">${pub.title}</a>` : pub.title}</div>
         <div class="pub-meta">${pub.published_on || "Unknown date"}</div>
-        <div>${(pub.co_authors || [])
-          .map((c) => `<span class="co-authors">${c}</span>`)
-          .join("")}</div>
+        <div>${formatCoAuthors(pub, p.name)}</div>
+        ${renderAbstract(pub)}
       </div>
     `
     )
@@ -211,10 +236,14 @@ function renderDetail(p) {
 
   detailEl.innerHTML = `
     <div class="section">
-      <h3>${p.name}</h3>
-      <p style="margin:4px 0;color:#5f6b7a;">${p.institution}</p>
-      <p style="margin:4px 0;">${p.email ? `<a href="mailto:${p.email}">${p.email}</a>` : "No email available"}</p>
-      ${profileLink ? `<div style="margin:8px 0 4px 0;">${profileLink}</div>` : ""}
+      <div class="detail-header">
+        <div class="detail-meta">
+          <h3>${p.name}</h3>
+          <p style="margin:4px 0;color:#5f6b7a;">${p.institution}</p>
+          <p style="margin:4px 0;">${p.email ? `<a href="mailto:${p.email}">${p.email}</a>` : "No email available"}</p>
+        </div>
+        ${profileLink ? `<div class="profile-link-cta">${profileLink}</div>` : ""}
+      </div>
       <div class="tags">${(p.top_tags || [])
         .map((t) => `<span class="tag">${t}</span>`)
         .join("")}</div>

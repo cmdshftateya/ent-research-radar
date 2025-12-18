@@ -4,6 +4,7 @@ from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy import inspect, text
 
 
 DB_PATH = Path(os.getenv("ENT_DB_PATH", "data/ent_research.db"))
@@ -28,3 +29,13 @@ def get_session():
         raise
     finally:
         session.close()
+
+
+def ensure_latest_schema() -> None:
+    inspector = inspect(engine)
+    if "publications" not in inspector.get_table_names():
+        return
+    columns = {col["name"] for col in inspector.get_columns("publications")}
+    if "abstract" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE publications ADD COLUMN abstract TEXT"))

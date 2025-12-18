@@ -96,6 +96,7 @@ def upsert_publications(
             existing.published_on = pub.get("published_on", existing.published_on)
             existing.link = pub.get("link", existing.link)
             existing.co_authors = co_authors or existing.co_authors
+            existing.abstract = pub.get("abstract", existing.abstract)
             saved.append(existing)
             continue
         new_pub = Publication(
@@ -104,6 +105,7 @@ def upsert_publications(
             published_on=pub.get("published_on"),
             link=pub.get("link"),
             co_authors=co_authors,
+            abstract=pub.get("abstract"),
         )
         session.add(new_pub)
         saved.append(new_pub)

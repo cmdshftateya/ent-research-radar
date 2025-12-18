@@ -1,3 +1,5 @@
+import datetime as dt
+
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
@@ -5,11 +7,13 @@ from sqlalchemy.orm import Session
 
 from . import crud
 from .config import OFFLINE
-from .db import Base, engine, get_session
+from .db import Base, engine, get_session, ensure_latest_schema
 from .models import Institution, Professor
 from .schemas import ProfessorDetail, ProfessorSummary
+from .publications import fetch_publications
 
 Base.metadata.create_all(bind=engine)
+ensure_latest_schema()
 
 app = FastAPI(title="ENT Research Tool", version="0.1.0")
 app.add_middleware(
@@ -55,6 +59,13 @@ def professor_detail(professor_id: int, db: Session = Depends(get_db)) -> Profes
     prof = db.get(Professor, professor_id)
     if not prof:
         raise HTTPException(status_code=404, detail="Professor not found")
+    pubs = list(prof.publications)
+    needs_refresh = (not pubs or len(pubs) < 20 or any(pub.abstract is None for pub in pubs)) and not OFFLINE
+    if needs_refresh:
+        fetched = fetch_publications(prof, limit=20)
+        crud.upsert_publications(db, prof, fetched)
+        prof.last_refreshed_at = dt.datetime.utcnow()
+        pubs = list(prof.publications)
     return ProfessorDetail(
         id=prof.id,
         name=prof.name,
@@ -72,8 +83,9 @@ def professor_detail(professor_id: int, db: Session = Depends(get_db)) -> Profes
                 "published_on": pub.published_on,
                 "link": pub.link,
                 "co_authors": [c.strip() for c in pub.co_authors.split(",") if c.strip()],
+                "abstract": pub.abstract,
             }
-            for pub in sorted(prof.publications, key=lambda p: p.published_on or "", reverse=True)[:20]
+            for pub in sorted(pubs, key=lambda p: p.published_on or "", reverse=True)[:20]
         ],
         collaborators=[
             {"id": c.id, "name": c.name, "affiliation": c.affiliation}

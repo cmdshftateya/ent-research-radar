@@ -3,8 +3,7 @@ Lightweight ingestion orchestrator.
 
 Scraping/parsing is implemented in a conservative/offline-friendly way. If
 ENT_OFFLINE=true, no network calls are made and only sample data is inserted.
-When ready to scrape live, unset ENT_OFFLINE and set SEMANTIC_SCHOLAR_API_KEY
-for publication enrichment.
+When ready to scrape live, unset ENT_OFFLINE to enable publication enrichment.
 """
 
 from __future__ import annotations
@@ -14,7 +13,7 @@ from typing import Iterable, List, Optional
 
 from . import crud
 from .config import OFFLINE
-from .db import Base, engine, get_session
+from .db import Base, engine, ensure_latest_schema, get_session
 from .models import Institution, Professor
 from .scrapers import fetch_institution_roster
 from .bio import fetch_professor_bio
@@ -41,14 +40,19 @@ INSTITUTIONS = [
 
 
 def refresh_all() -> None:
+    print("[ingest] Starting refresh...", flush=True)
     Base.metadata.create_all(bind=engine)
+    ensure_latest_schema()
     with get_session() as session:
         if OFFLINE:
+            print("[ingest] ENT_OFFLINE set; seeding sample data.", flush=True)
             seed_sample_data(session)
             return
         for inst_info in INSTITUTIONS:
+            print(f"[ingest] Processing {inst_info['name']}...", flush=True)
             inst = crud.upsert_institution(session, inst_info["name"], inst_info["website"])
             roster = fetch_institution_roster(inst)
+            print(f"[ingest] Found {len(roster)} roster entries for {inst.name}.", flush=True)
             for entry in roster:
                 prof = crud.upsert_professor(
                     session,
@@ -65,6 +69,8 @@ def refresh_all() -> None:
                 tags = derive_tags(pubs, biography=prof.biography)
                 crud.set_professor_tags(session, prof, tags[:10])
                 prof.last_refreshed_at = dt.datetime.utcnow()
+                print(f"[ingest] Updated {prof.name}.", flush=True)
+    print("[ingest] Refresh complete.", flush=True)
 
 
 def seed_sample_data(session=None) -> None:
@@ -96,12 +102,14 @@ def _seed(session):
             "published_on": "2023-11-01",
             "link": "https://doi.org/example1",
             "co_authors": ["A. Smith", "B. Chen"],
+            "abstract": "A survey of recent innovations in otolaryngology with emphasis on multidisciplinary care models and hearing restoration outcomes.",
         },
         {
             "title": "Hearing Loss Interventions",
             "published_on": "2022-06-15",
             "link": "https://doi.org/example2",
             "co_authors": ["C. Patel"],
+            "abstract": "Clinical trial results evaluating novel interventions for progressive hearing loss in adult populations.",
         },
     ]
     crud.upsert_publications(session, prof, pubs)

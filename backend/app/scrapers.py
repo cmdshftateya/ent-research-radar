@@ -21,6 +21,12 @@ from .models import Institution
 HEADERS = {"User-Agent": USER_AGENT}
 
 
+def _log(msg: str) -> None:
+    """Lightweight console logging for scraper progress."""
+
+    print(msg, flush=True)
+
+
 def _strip_credentials(raw_name: str) -> str:
     """Remove common degree suffixes and credentials from display names."""
 
@@ -31,35 +37,46 @@ def _strip_credentials(raw_name: str) -> str:
 
 def fetch_institution_roster(institution: Institution) -> List[dict]:
     if OFFLINE:
+        _log(f"[scraper] ENT_OFFLINE set; skipping scrape for {institution.name}.")
         return []
     url = institution.website
     if not url:
+        _log(f"[scraper] No website for {institution.name}; skipping.")
         return []
+    _log(f"[scraper] Fetching roster for {institution.name} ({url})")
     if "northwestern" in url:
+        _log("[scraper] Using Northwestern scraper.")
         return fetch_northwestern(url)
 
     html = fetch_html(url)
     if not html:
+        _log(f"[scraper] Unable to fetch HTML for {url}; returning empty roster.")
         return []
     soup = BeautifulSoup(html, "html.parser")
 
     if "uchicago" in url:
+        _log("[scraper] Using UChicago scraper.")
         return parse_uchicago(soup, url)
     if "uic.edu" in url:
+        _log("[scraper] Using UIC scraper.")
         return parse_uic(soup, url)
     if "rush.edu" in url:
+        _log("[scraper] Using Rush scraper.")
         return parse_rush(soup, url)
 
+    _log("[scraper] Using generic scraper.")
     return generic_people_scrape(soup, url)
 
 
 def fetch_html(url: str) -> str | None:
+    _log(f"[scraper] GET {url}")
     try:
         with httpx.Client(headers=HEADERS, timeout=HTTP_TIMEOUT) as client:
             resp = client.get(url)
             resp.raise_for_status()
             return resp.text
     except Exception:
+        _log(f"[scraper] Request failed for {url}")
         return None
 
 
@@ -76,6 +93,7 @@ def fetch_northwestern(base_url: str) -> List[dict]:
     next_url = base_url
 
     while next_url and next_url not in seen_pages:
+        _log(f"[scraper] Parsing Northwestern page: {next_url}")
         seen_pages.add(next_url)
         html = fetch_html(next_url)
         if not html:
@@ -216,6 +234,37 @@ def parse_uic(soup: BeautifulSoup, base_url: str) -> List[dict]:
 
 
 def parse_rush(soup: BeautifulSoup, base_url: str) -> List[dict]:
+    team_items = soup.select(".meet-the-team--item")
+    results: List[dict] = []
+
+    if team_items:
+        for item in team_items:
+            name_link = item.select_one("h3 a")
+            raw_name = name_link.get_text(" ", strip=True) if name_link else item.get_text(" ", strip=True)
+
+            # Skip providers without physician credentials (e.g., PA, NP).
+            if not re.search(r"\b(md|do)\b", raw_name, flags=re.I):
+                continue
+
+            name = _strip_credentials(raw_name)
+            if not name:
+                continue
+
+            profile_url = urljoin(base_url, name_link["href"]) if name_link and name_link.get("href") else None
+            specialty_el = item.select_one(".specialties")
+            specialty = specialty_el.get_text(" ", strip=True) if specialty_el else None
+
+            results.append(
+                {
+                    "name": name,
+                    "email": None,
+                    "profile_url": profile_url,
+                    "biography": specialty,
+                }
+            )
+
+        return dedupe(results)
+
     results = []
     cards = soup.select(".provider-card, .views-row, article, .card--provider")
 

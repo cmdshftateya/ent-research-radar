@@ -160,6 +160,21 @@
     }
     .professor:hover .tag { background: var(--bg); color: var(--ink); }
     .detail { padding: 22px; }
+    .detail-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .detail-meta {
+      flex: 1;
+      min-width: 220px;
+    }
+    .profile-link-cta {
+      margin-left: auto;
+      text-align: right;
+    }
     .profile-link {
       display: inline-flex;
       align-items: center;
@@ -209,6 +224,35 @@
       border: 1px solid var(--line);
       margin-top: 4px;
       display: inline-block;
+    }
+    .co-authors strong { font-weight: 800; }
+    .co-authors-muted {
+      background: transparent;
+      border-style: dashed;
+      color: var(--muted);
+    }
+    .abstract {
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: #fffdf8;
+    }
+    .abstract summary {
+      cursor: pointer;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+    .abstract[open] summary { color: var(--ink); }
+    .abstract p {
+      margin: 8px 0 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .abstract-muted {
+      background: transparent;
+      border-style: dashed;
     }
     .chip {
       background: #ffffff;

@@ -10,6 +10,7 @@ class PublicationOut(BaseModel):
     published_on: Optional[str] = None
     link: Optional[str] = None
     co_authors: List[str] = []
+    abstract: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -71,6 +71,7 @@ class Publication(Base):
     published_on: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     link: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     co_authors: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    abstract: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     professor: Mapped[Professor] = relationship(back_populates="publications")

@@ -27,7 +27,6 @@ ENT_OFFLINE=true python cli/refresh.py seed-sample
 ## Refresh live data (scrape + publications)
 
 ```bash
-export SEMANTIC_SCHOLAR_API_KEY=your_key   # optional but recommended
 python cli/refresh.py refresh
 ```
 
