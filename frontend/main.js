@@ -9,14 +9,21 @@ const copyBtn = document.getElementById("copyBtn");
 const draftEl = document.getElementById("draft");
 const pageSizeEl = document.getElementById("pageSize");
 const paginationEl = document.getElementById("pagination");
+const closeBtn = document.getElementById("closeSidebar");
 
 let professors = [];
 let filtered = [];
 let activeId = null;
 let pageSize = Number(pageSizeEl?.value) || 10;
 let currentPage = 1;
+let lastLoadedDetail = null;
 
 toggleBtn.setAttribute("aria-expanded", "false");
+
+const boilerplate = buildDraft();
+if (draftEl && !draftEl.value) {
+  draftEl.value = boilerplate;
+}
 
 function setDrawer(open) {
   sidebarEl.classList.toggle("open", open);
@@ -28,8 +35,6 @@ toggleBtn.addEventListener("click", () => {
   setDrawer(!sidebarEl.classList.contains("open"));
 });
 
-// Close button is optional; guard if not present.
-const closeBtn = document.getElementById("closeSidebar");
 if (closeBtn) {
   closeBtn.addEventListener("click", () => setDrawer(false));
 }
@@ -167,13 +172,19 @@ async function selectProfessor(id) {
     const res = await fetch(`${API_BASE}/professors/${id}`);
     if (!res.ok) throw new Error("Not found");
     const p = await res.json();
+    lastLoadedDetail = p;
     renderDetail(p);
+    updateDraft(p);
   } catch (err) {
     detailEl.innerHTML = `<p style="color:#b91c1c;">Failed to load professor details.</p>`;
   }
 }
 
 function renderDetail(p) {
+  const aboutHtml = p.biography
+    ? `<p>${p.biography}</p>`
+    : "<p style=\"color:#5f6b7a;\">No biography available.</p>";
+
   const pubHtml = (p.publications || [])
     .map(
       (pub) => `
@@ -209,6 +220,10 @@ function renderDetail(p) {
         .join("")}</div>
     </div>
     <div class="section">
+      <h3>About</h3>
+      ${aboutHtml}
+    </div>
+    <div class="section">
       <h3>Recent Publications</h3>
       ${pubHtml || "<p>No publications available.</p>"}
     </div>
@@ -217,6 +232,45 @@ function renderDetail(p) {
       ${collabHtml || "<p>No collaborators listed.</p>"}
     </div>
   `;
+}
+
+function buildDraft(p = null) {
+  const name = p?.name || "there";
+  const greetingName = name.split(" ").slice(-1)[0];
+  const institution = p?.institution ? ` at ${p.institution}` : "";
+  const tags = (p?.top_tags || []).slice(0, 3).join(", ");
+  const interests = tags ? `I have been following your work on ${tags}. ` : "";
+  const latest = p?.publications?.[0];
+  const recentLine = latest
+    ? `Your recent paper "${latest.title}" (${latest.published_on || "n.d."}) caught my eye.`
+    : "";
+  const bioLine = p?.biography
+    ? ` I enjoyed reading about ${p.biography.slice(0, 160)}${
+        p.biography.length > 160 ? "..." : "."
+      }`
+    : "";
+
+  return `Hi Dr. ${greetingName},
+
+My name is [Your Name], and I am researching otolaryngology partnerships${institution}. ${interests}${recentLine}${bioLine}
+
+I would appreciate the opportunity to learn more about your current projects and explore how I might contribute. Are you available for a brief call over the next two weeks?
+
+Thank you for your time,
+[Your Name]
+[Your Affiliation]
+`;
+}
+
+function updateDraft(p) {
+  if (!draftEl) return;
+  draftEl.value = buildDraft(p);
+}
+
+if (draftEl) {
+  draftEl.addEventListener("input", () => {
+    draftEl.dataset.userEdited = "true";
+  });
 }
 
 loadProfessors();

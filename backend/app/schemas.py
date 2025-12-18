@@ -43,6 +43,7 @@ class ProfessorDetail(BaseModel):
     profile_url: Optional[str]
     h_index: Optional[int]
     has_lab: bool
+    biography: Optional[str]
     top_tags: List[str]
     publications: List[PublicationOut]
     collaborators: List[CollaboratorOut]

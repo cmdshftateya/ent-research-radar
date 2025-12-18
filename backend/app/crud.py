@@ -29,6 +29,7 @@ def upsert_professor(
     profile_url: Optional[str] = None,
     h_index: Optional[int] = None,
     has_lab: bool = False,
+    biography: Optional[str] = None,
 ) -> Professor:
     existing = session.scalar(
         select(Professor).where(
@@ -41,6 +42,8 @@ def upsert_professor(
         if h_index is not None:
             existing.h_index = h_index
         existing.has_lab = existing.has_lab or has_lab
+        if biography:
+            existing.biography = biography
         return existing
 
     prof = Professor(
@@ -50,6 +53,7 @@ def upsert_professor(
         profile_url=profile_url,
         h_index=h_index,
         has_lab=has_lab,
+        biography=biography,
     )
     session.add(prof)
     session.flush()
@@ -59,6 +63,7 @@ def upsert_professor(
 def set_professor_tags(session: Session, professor: Professor, tags: Iterable[str]) -> None:
     normalized = {tag.strip().lower() for tag in tags if tag.strip()}
     if not normalized:
+        professor.tags = []
         return
 
     tag_objects: List[ResearchTag] = []

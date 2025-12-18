@@ -221,7 +221,7 @@
       font-weight: 700;
       border: 1px solid var(--line);
     }
-    .sidebar {
+    .sidebar { 
       position: fixed;
       right: 0;
       top: 0;
@@ -238,6 +238,22 @@
       gap: 12px;
       z-index: 10;
       border-left: 2px solid var(--line);
+    }
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .sidebar .close-btn {
+      background: transparent;
+      border: 1px solid var(--bg);
+      color: var(--bg);
+      border-radius: 10px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.08em;
     }
     .sidebar.open { transform: translateX(0); }
     .sidebar textarea {
@@ -262,6 +278,12 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
       box-shadow: 4px 4px 0 var(--bg);
+    }
+    .sidebar .hint {
+      margin: 0;
+      color: #d6d1c5;
+      font-size: 13px;
+      line-height: 1.4;
     }
     .pagination {
       display: flex;
@@ -312,7 +334,11 @@
 </head>
 <body>
   <div class="sidebar" id="sidebar">
-    <h3 style="margin:0;">Email draft</h3>
+    <div class="sidebar-header">
+      <h3 style="margin:0;">Email draft</h3>
+      <button class="close-btn" id="closeSidebar" aria-label="Close draft panel">✕</button>
+    </div>
+    <p class="hint">A starter outreach draft will populate when you pick a professor. Customize and copy from here.</p>
     <textarea id="draft" placeholder="Write your outreach draft here..."></textarea>
     <button id="copyBtn">Copy to clipboard</button>
   </div>
