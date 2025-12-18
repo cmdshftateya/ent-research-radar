@@ -30,8 +30,41 @@ def _log(msg: str) -> None:
 def _strip_credentials(raw_name: str) -> str:
     """Remove common degree suffixes and credentials from display names."""
 
-    name = re.sub(r",\s*(md|do|ms|mph|phd|aud|pa-c|np|rn|facs|ccc-slp|faap|cnm|dnp)\.?$", "", raw_name, flags=re.I)
-    name = re.sub(r"\s+(md|do|ms|mph|phd|aud|pa-c|np|rn|facs|ccc-slp|faap|cnm|dnp)\.?$", "", name, flags=re.I)
+    credentials = [
+        "md",
+        "do",
+        "phd",
+        "ms",
+        "mph",
+        "msn",
+        "mscr",
+        "mba",
+        "aud",
+        "pa",
+        "pa-c",
+        "aprn",
+        "np",
+        "fnp",
+        "anp",
+        "cnp",
+        "acnp",
+        "agnp",
+        "rn",
+        "bsn",
+        "facs",
+        "ccc-slp",
+        "faap",
+        "cnm",
+        "dnp",
+    ]
+    pattern = r"(,\s*|\s+)(?:" + "|".join(credentials) + r")\.?$"
+    name = raw_name
+    # Drop repeated trailing credentials like ", MSN, PA-C".
+    while True:
+        new_name = re.sub(pattern, "", name, flags=re.I)
+        if new_name == name:
+            break
+        name = new_name
     return name.strip()
 
 

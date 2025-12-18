@@ -9,8 +9,9 @@ from . import crud
 from .config import OFFLINE
 from .db import Base, engine, get_session, ensure_latest_schema
 from .models import Institution, Professor
-from .schemas import ProfessorDetail, ProfessorSummary
+from .schemas import ProfessorDetail, ProfessorSummary, UpdateEmailRequest
 from .publications import fetch_publications
+from .utils import has_recent_publication
 
 Base.metadata.create_all(bind=engine)
 ensure_latest_schema()
@@ -42,6 +43,7 @@ def list_professors(db: Session = Depends(get_db)) -> list[ProfessorSummary]:
     ).all()
     results: list[ProfessorSummary] = []
     for prof in professors:
+        recent = has_recent_publication(prof.publications)
         results.append(
             ProfessorSummary(
                 id=prof.id,
@@ -49,6 +51,7 @@ def list_professors(db: Session = Depends(get_db)) -> list[ProfessorSummary]:
                 email=prof.email,
                 institution=prof.institution.name,
                 tags=[t.name for t in prof.tags][:10],
+                has_recent_publication=recent,
             )
         )
     return results
@@ -62,10 +65,13 @@ def professor_detail(professor_id: int, db: Session = Depends(get_db)) -> Profes
     pubs = list(prof.publications)
     needs_refresh = (not pubs or len(pubs) < 20 or any(pub.abstract is None for pub in pubs)) and not OFFLINE
     if needs_refresh:
-        fetched = fetch_publications(prof, limit=20)
-        crud.upsert_publications(db, prof, fetched)
-        prof.last_refreshed_at = dt.datetime.utcnow()
-        pubs = list(prof.publications)
+        try:
+            fetched = fetch_publications(prof, limit=20)
+            crud.upsert_publications(db, prof, fetched)
+            prof.last_refreshed_at = dt.datetime.utcnow()
+            pubs = list(prof.publications)
+        except Exception as exc:  # defensive: never fail the endpoint on refresh
+            print(f"[error] refresh failed for professor {professor_id}: {exc}", flush=True)
     return ProfessorDetail(
         id=prof.id,
         name=prof.name,
@@ -75,6 +81,7 @@ def professor_detail(professor_id: int, db: Session = Depends(get_db)) -> Profes
         h_index=prof.h_index,
         has_lab=prof.has_lab,
         biography=prof.biography,
+        has_recent_publication=has_recent_publication(pubs),
         top_tags=[t.name for t in prof.tags][:10],
         publications=[
             {
@@ -93,3 +100,16 @@ def professor_detail(professor_id: int, db: Session = Depends(get_db)) -> Profes
         ],
         last_refreshed_at=prof.last_refreshed_at,
     )
+
+
+@app.post("/professors/{professor_id}/email")
+def update_professor_email(
+    professor_id: int, payload: UpdateEmailRequest, db: Session = Depends(get_db)
+) -> dict:
+    prof = db.get(Professor, professor_id)
+    if not prof:
+        raise HTTPException(status_code=404, detail="Professor not found")
+    prof.email = payload.email.strip()
+    db.add(prof)
+    db.flush()
+    return {"id": prof.id, "email": prof.email}

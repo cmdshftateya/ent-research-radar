@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class PublicationOut(BaseModel):
@@ -31,6 +31,7 @@ class ProfessorSummary(BaseModel):
     email: Optional[str]
     institution: str
     tags: List[str]
+    has_recent_publication: bool = False
 
     class Config:
         from_attributes = True
@@ -46,9 +47,14 @@ class ProfessorDetail(BaseModel):
     has_lab: bool
     biography: Optional[str]
     top_tags: List[str]
+    has_recent_publication: bool = False
     publications: List[PublicationOut]
     collaborators: List[CollaboratorOut]
     last_refreshed_at: Optional[datetime]
 
     class Config:
         from_attributes = True
+
+
+class UpdateEmailRequest(BaseModel):
+    email: EmailStr

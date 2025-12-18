@@ -10,6 +10,8 @@ const draftEl = document.getElementById("draft");
 const pageSizeEl = document.getElementById("pageSize");
 const paginationEl = document.getElementById("pagination");
 const closeBtn = document.getElementById("closeSidebar");
+const institutionFilterEl = document.getElementById("filterInstitution");
+const recentFilterEl = document.getElementById("recentFilter");
 
 let professors = [];
 let filtered = [];
@@ -17,6 +19,9 @@ let activeId = null;
 let pageSize = Number(pageSizeEl?.value) || 10;
 let currentPage = 1;
 let lastLoadedDetail = null;
+let searchTerm = "";
+let institutionFilter = "all";
+let recentOnly = false;
 
 toggleBtn.setAttribute("aria-expanded", "false");
 
@@ -62,14 +67,8 @@ copyBtn.addEventListener("click", async () => {
 });
 
 searchEl.addEventListener("input", (e) => {
-  const term = e.target.value.toLowerCase();
-  filtered = professors.filter(
-    (p) =>
-      p.name.toLowerCase().includes(term) ||
-      (p.institution || "").toLowerCase().includes(term)
-  );
-  currentPage = 1;
-  renderList();
+  searchTerm = e.target.value.toLowerCase();
+  applyFilters();
 });
 
 if (pageSizeEl) {
@@ -80,16 +79,40 @@ if (pageSizeEl) {
   });
 }
 
+if (institutionFilterEl) {
+  institutionFilterEl.addEventListener("change", (e) => {
+    institutionFilter = e.target.value || "all";
+    applyFilters();
+  });
+}
+
+if (recentFilterEl) {
+  recentFilterEl.addEventListener("change", (e) => {
+    recentOnly = e.target.checked;
+    applyFilters();
+  });
+}
+
 async function loadProfessors() {
   try {
     const res = await fetch(`${API_BASE}/professors`);
     professors = await res.json();
+    populateInstitutionFilter();
     filtered = professors;
     currentPage = 1;
     renderList();
   } catch (err) {
     detailEl.innerHTML = `<p style="color:#b91c1c;">Failed to load data. Start the backend (uvicorn backend.app.main:app --reload).</p>`;
   }
+}
+
+function populateInstitutionFilter() {
+  if (!institutionFilterEl) return;
+  const options = Array.from(
+    new Set(professors.map((p) => p.institution).filter(Boolean))
+  ).sort();
+  institutionFilterEl.innerHTML = `<option value="all">All institutions</option>` +
+    options.map((inst) => `<option value="${inst}">${inst}</option>`).join("");
 }
 
 function renderList() {
@@ -102,8 +125,9 @@ function renderList() {
   visible.forEach((p) => {
     const div = document.createElement("div");
     div.className = "professor";
+    const star = p.has_recent_publication ? `<span class="recent-star" title="Published in last 3 months">★</span>` : "";
     div.innerHTML = `
-      <strong>${p.name}</strong>
+      <strong>${p.name} ${star}</strong>
       <small>${p.institution}</small>
       <div class="tags">${(p.tags || [])
         .map((t) => `<span class="tag">${t}</span>`)
@@ -167,6 +191,11 @@ function renderPagination(totalPages) {
 
 function normalizeName(name = "") {
   return name.toLowerCase().replace(/\./g, "").replace(/\s+/g, " ").trim();
+}
+
+function escapeHtml(str = "") {
+  const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+  return str.replace(/[&<>"']/g, (ch) => map[ch]);
 }
 
 function formatCoAuthors(pub, professorName) {
@@ -233,14 +262,30 @@ function renderDetail(p) {
   const profileLink = p.profile_url
     ? `<a class="profile-link" href="${p.profile_url}" target="_blank" rel="noopener noreferrer">Open faculty profile ↗</a>`
     : "";
+  const emailDisplay = p.email
+    ? `<a href="mailto:${encodeURIComponent(p.email)}">${escapeHtml(p.email)}</a>`
+    : "No email on file yet.";
+  const emailValue = p.email ? escapeHtml(p.email) : "";
 
   detailEl.innerHTML = `
     <div class="section">
       <div class="detail-header">
         <div class="detail-meta">
-          <h3>${p.name}</h3>
+          <h3>${p.name} ${p.has_recent_publication ? '<span class="recent-star" title="Published in last 3 months">★</span>' : ""}</h3>
           <p style="margin:4px 0;color:#5f6b7a;">${p.institution}</p>
-          <p style="margin:4px 0;">${p.email ? `<a href="mailto:${p.email}">${p.email}</a>` : "No email available"}</p>
+          <div class="email-block">
+            <p class="email-label">Email</p>
+            <p class="email-display prof-email-display">${emailDisplay}</p>
+            <form class="email-form" id="emailForm">
+              <label class="email-label" for="emailInput">Found one on their profile?</label>
+              <div class="email-input-row">
+                <input type="email" id="emailInput" name="email" placeholder="e.g. dr.smith@uchicago.edu" value="${emailValue}">
+                <button type="submit">${p.email ? "Update email" : "Add email"}</button>
+              </div>
+              <p class="email-hint">Drop a verified email you find so it's saved next time.</p>
+              <div class="email-status" id="emailStatus" aria-live="polite"></div>
+            </form>
+          </div>
         </div>
         ${profileLink ? `<div class="profile-link-cta">${profileLink}</div>` : ""}
       </div>
@@ -261,6 +306,80 @@ function renderDetail(p) {
       ${collabHtml || "<p>No collaborators listed.</p>"}
     </div>
   `;
+  wireEmailForm(p);
+}
+
+function applyFilters() {
+  filtered = professors.filter((p) => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchTerm) ||
+      (p.institution || "").toLowerCase().includes(searchTerm);
+    const matchesInstitution =
+      institutionFilter === "all" || p.institution === institutionFilter;
+    const matchesRecent = !recentOnly || p.has_recent_publication;
+    return matchesSearch && matchesInstitution && matchesRecent;
+  });
+  currentPage = 1;
+  renderList();
+}
+
+function setEmailStatus(message, tone = "info") {
+  const statusEl = document.getElementById("emailStatus");
+  if (!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.classList.remove("success", "error");
+  if (tone === "success") statusEl.classList.add("success");
+  if (tone === "error") statusEl.classList.add("error");
+}
+
+function wireEmailForm(p) {
+  const form = document.getElementById("emailForm");
+  const input = document.getElementById("emailInput");
+  const submitBtn = form?.querySelector("button[type='submit']");
+  if (!form || !input || !submitBtn) return;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = input.value.trim();
+    if (!email) {
+      setEmailStatus("Please enter an email before saving.", "error");
+      return;
+    }
+    setEmailStatus("Saving email...");
+    submitBtn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/professors/${p.id}/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      let errorMessage = "Failed to save email. Try again.";
+      if (!res.ok) {
+        if (res.status === 422) {
+          errorMessage = "Please enter a valid email address.";
+        }
+        throw new Error(errorMessage);
+      }
+      const data = await res.json();
+      const savedEmail = data.email || email;
+      const display = document.querySelector(".prof-email-display");
+      if (display) {
+        display.innerHTML = `<a href="mailto:${encodeURIComponent(savedEmail)}">${escapeHtml(savedEmail)}</a>`;
+      }
+      input.value = savedEmail;
+      lastLoadedDetail = { ...p, email: savedEmail };
+      updateDraft(lastLoadedDetail);
+      const profIdx = professors.findIndex((prof) => prof.id === p.id);
+      if (profIdx !== -1) {
+        professors[profIdx] = { ...professors[profIdx], email: savedEmail };
+      }
+      setEmailStatus("Email saved.", "success");
+    } catch (err) {
+      setEmailStatus(err.message || "Failed to save email. Try again.", "error");
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
 }
 
 function buildDraft(p = null) {

@@ -171,6 +171,74 @@
       flex: 1;
       min-width: 220px;
     }
+    .email-block {
+      margin-top: 8px;
+      padding: 12px;
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      background: #fffdf8;
+    }
+    .email-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin: 0 0 4px 0;
+      font-weight: 800;
+    }
+    .email-display {
+      margin: 0 0 8px 0;
+      font-weight: 700;
+    }
+    .email-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .email-input-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .email-input-row input {
+      flex: 1;
+      min-width: 220px;
+      padding: 10px 12px;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      background: #ffffff;
+      color: var(--ink);
+      box-shadow: 4px 4px 0 var(--line);
+    }
+    .email-input-row button {
+      border: 2px solid var(--line);
+      background: var(--ink);
+      color: var(--bg);
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      box-shadow: 4px 4px 0 var(--line);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+    }
+    .email-input-row button:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 6px 6px 0 var(--line); background: #ffffff; color: var(--ink); }
+    .email-input-row button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .email-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .email-status {
+      min-height: 18px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .email-status.success { color: #15803d; }
+    .email-status.error { color: #b91c1c; }
     .profile-link-cta {
       margin-left: auto;
       text-align: right;
@@ -364,6 +432,43 @@
       font-weight: 700;
       letter-spacing: 0.05em;
     }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      width: 100%;
+    }
+    .filter-select {
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #ffffff;
+      color: var(--ink);
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 var(--line);
+    }
+    .filter-checkbox {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: var(--muted);
+      padding: 10px 12px;
+      border: 2px dashed var(--line);
+      border-radius: 12px;
+      background: #fffdf8;
+    }
+    .filter-checkbox input { accent-color: var(--ink); }
+    .recent-star {
+      color: #f97316;
+      margin-left: 6px;
+      font-size: 16px;
+      vertical-align: middle;
+    }
     body.drawer-open .page { margin-right: 400px; }
     body.drawer-open .layout { transition: inherit; }
     @media (max-width: 900px) {
@@ -403,6 +508,15 @@
         <div class="list-header">
           <div class="list-controls">
             <input class="search" id="search" type="text" placeholder="Search by name or institution...">
+            <div class="filters">
+              <select id="filterInstitution" class="filter-select">
+                <option value="all">All institutions</option>
+              </select>
+              <label class="filter-checkbox" for="recentFilter">
+                <input type="checkbox" id="recentFilter">
+                <span>Published last 3 months ★</span>
+              </label>
+            </div>
             <label class="page-size">
               <span>Page size</span>
               <select id="pageSize">
