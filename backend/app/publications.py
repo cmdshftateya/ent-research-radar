@@ -22,14 +22,14 @@ if SEMANTIC_SCHOLAR_API_KEY:
     HEADERS["x-api-key"] = SEMANTIC_SCHOLAR_API_KEY
 
 
-def fetch_publications(professor: Professor) -> List[dict]:
+def fetch_publications(professor: Professor, limit: int = 20) -> List[dict]:
     if OFFLINE:
         return []
     author_id = lookup_author_id(professor)
     if not author_id:
         return []
     params = {
-        "limit": 20,
+        "limit": limit,
         "fields": "title,year,url,authors,journal,publicationTypes,externalIds",
     }
     try:
@@ -44,7 +44,7 @@ def fetch_publications(professor: Professor) -> List[dict]:
         results.append(
             {
                 "title": item.get("title"),
-                "published_on": str(item.get("year")) if item.get("year") else None,
+                "published_on": _published_on(item),
                 "link": item.get("url") or _first_doi(item),
                 "co_authors": [a.get("name") for a in item.get("authors", []) if a.get("name")],
             }
@@ -70,11 +70,13 @@ def lookup_author_id(professor: Professor) -> str | None:
     return data["data"][0].get("authorId")
 
 
-def derive_tags(publications: Iterable[dict]) -> List[str]:
+def derive_tags(publications: Iterable[dict], biography: str | None = None) -> List[str]:
     tokens = []
     for pub in publications:
         title = pub.get("title") or ""
         tokens.extend(normalize_terms(title))
+    if biography:
+        tokens.extend(normalize_terms(biography))
     counts = Counter(tokens)
     return [t for t, _ in counts.most_common(10)]
 
@@ -91,4 +93,13 @@ def _first_doi(item: dict) -> str | None:
     doi = ids.get("DOI")
     if doi:
         return f"https://doi.org/{doi}"
+    return None
+
+
+def _published_on(item: dict) -> str | None:
+    if item.get("year"):
+        return str(item["year"])
+    for key in ("publicationDate", "date"):
+        if item.get(key):
+            return str(item[key])
     return None

@@ -17,6 +17,7 @@ from .config import OFFLINE
 from .db import Base, engine, get_session
 from .models import Institution, Professor
 from .scrapers import fetch_institution_roster
+from .bio import fetch_professor_bio
 from .publications import fetch_publications, derive_tags
 
 INSTITUTIONS = [
@@ -56,9 +57,12 @@ def refresh_all() -> None:
                     institution=inst,
                     profile_url=entry.get("profile_url"),
                 )
-                pubs = fetch_publications(prof)
+                if entry.get("profile_url") and not prof.biography:
+                    prof.biography = fetch_professor_bio(entry.get("profile_url"))
+
+                pubs = fetch_publications(prof, limit=20)
                 crud.upsert_publications(session, prof, pubs[:20])
-                tags = derive_tags(pubs)
+                tags = derive_tags(pubs, biography=prof.biography)
                 crud.set_professor_tags(session, prof, tags[:10])
                 prof.last_refreshed_at = dt.datetime.utcnow()
 
@@ -84,6 +88,7 @@ def _seed(session):
         profile_url="https://example.edu/jane-doe",
         h_index=42,
         has_lab=True,
+        biography="Dr. Jane Doe leads translational research on hearing loss and cochlear implant outcomes, mentoring residents and collaborating across neurology and speech pathology.",
     )
     pubs = [
         {

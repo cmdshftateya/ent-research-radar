@@ -21,6 +21,14 @@ from .models import Institution
 HEADERS = {"User-Agent": USER_AGENT}
 
 
+def _strip_credentials(raw_name: str) -> str:
+    """Remove common degree suffixes and credentials from display names."""
+
+    name = re.sub(r",\s*(md|do|ms|mph|phd|aud|pa-c|np|rn|facs|ccc-slp|faap|cnm|dnp)\.?$", "", raw_name, flags=re.I)
+    name = re.sub(r"\s+(md|do|ms|mph|phd|aud|pa-c|np|rn|facs|ccc-slp|faap|cnm|dnp)\.?$", "", name, flags=re.I)
+    return name.strip()
+
+
 def fetch_institution_roster(institution: Institution) -> List[dict]:
     if OFFLINE:
         return []
@@ -123,17 +131,6 @@ def find_next_page(soup: BeautifulSoup, current_url: str) -> str | None:
 
 
 def parse_uchicago(soup: BeautifulSoup, base_url: str) -> List[dict]:
-    def _strip_degrees(raw_name: str) -> str:
-        # Remove degree suffixes (e.g., ", MD", ", MD, MPH") and stray trailing credentials.
-        name = re.sub(r",.*$", "", raw_name).strip()
-        name = re.sub(
-            r"\s+(MD|DO|MSPA|MSN|MS|MPH|PHD|AUD|PA-C|NP|RN|FACS|CCC-SLP|FAAP|CNM|DNP)\.?$",
-            "",
-            name,
-            flags=re.IGNORECASE,
-        )
-        return name.strip()
-
     sections = soup.find_all("section", class_="container")
     start_idx = None
     end_idx = None
@@ -163,7 +160,7 @@ def parse_uchicago(soup: BeautifulSoup, base_url: str) -> List[dict]:
                 img = link.find("img")
                 alt = img.get("alt") if img else None
                 name = alt.strip() if alt else ""
-            name = _strip_degrees(name)
+            name = _strip_credentials(name)
             if not name:
                 continue
             profile_url = urljoin(base_url, href)
@@ -220,20 +217,37 @@ def parse_uic(soup: BeautifulSoup, base_url: str) -> List[dict]:
 
 def parse_rush(soup: BeautifulSoup, base_url: str) -> List[dict]:
     results = []
-    cards = soup.select(".views-row, .provider-card")
+    cards = soup.select(".provider-card, .views-row, article, .card--provider")
+
     for card in cards:
-        name_el = card.select_one("h3, h2, .provider-name")
-        name = name_el.get_text(strip=True) if name_el else card.get_text(" ", strip=True)
-        email = None
-        profile_url = None
+        name_el = card.select_one(
+            ".provider-card__name, .provider-name, .provider-card__title, h3, h2"
+        )
         link = card.find("a", href=True)
+
+        raw_name = ""
+        if name_el:
+            raw_name = name_el.get_text(" ", strip=True)
+        elif link:
+            raw_name = link.get_text(" ", strip=True)
+        else:
+            raw_name = card.get_text(" ", strip=True)
+
+        name = _strip_credentials(raw_name)
+        if not name:
+            continue
+
+        profile_url = None
         if link:
             href = link.get("href")
             if href and not href.startswith("mailto:"):
-                profile_url = href if href.startswith("http") else base_url.rstrip("/") + "/" + href.lstrip("/")
-        if name:
-            results.append({"name": name, "email": email, "profile_url": profile_url})
-    return dedupe(results)
+                profile_url = urljoin(base_url, href)
+
+        results.append({"name": name, "email": None, "profile_url": profile_url})
+
+    if results:
+        return dedupe(results)
+    return generic_people_scrape(soup, base_url)
 
 
 def generic_people_scrape(soup: BeautifulSoup, base_url: str) -> List[dict]:

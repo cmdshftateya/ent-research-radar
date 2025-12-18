@@ -63,6 +63,7 @@ def professor_detail(professor_id: int, db: Session = Depends(get_db)) -> Profes
         profile_url=prof.profile_url,
         h_index=prof.h_index,
         has_lab=prof.has_lab,
+        biography=prof.biography,
         top_tags=[t.name for t in prof.tags][:10],
         publications=[
             {
